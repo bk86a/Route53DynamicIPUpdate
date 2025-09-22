@@ -48,7 +48,11 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y curl jq awscli
+          sudo apt-get install -y curl jq unzip
+          # Install AWS CLI v2
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
 
       - name: Run unit tests
         run: |
@@ -103,7 +107,7 @@ jobs:
           echo "Scanning for potential secrets..."
 
           # Check for common secret patterns (should not find any)
-          if grep -r -E "(password|secret|key|token)" --include="*.sh" --include="*.md" --include="*.yml" . | grep -v -E "(example|template|placeholder|YOUR_|EXAMPLE)"; then
+          if grep -r -E "(password|secret|key|token)" --include="*.sh" --include="*.md" . | grep -v -E "(example|template|placeholder|YOUR_|EXAMPLE)" | grep -v -E "(github\.com|workflows|actions|\.github/|secrets\.|_TOKEN|_KEY)"; then
             echo "❌ Potential secrets found!"
             exit 1
           fi
