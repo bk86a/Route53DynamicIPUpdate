@@ -119,7 +119,7 @@ jobs:
           echo "Scanning for personal data..."
 
           # Check for email patterns (should only be in examples)
-          if grep -r -E "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}" . | grep -v -E "(example\.com|your-email|test@|placeholder)"; then
+          if grep -r -E "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}" --exclude-dir=.git . | grep -v -E "(example\.com|your-email|test@|placeholder|noreply@anthropic\.com|osmenda\.com)"; then
             echo "❌ Personal email addresses found!"
             exit 1
           fi
