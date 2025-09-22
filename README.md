@@ -230,12 +230,8 @@ All activities are logged with timestamps and configurable levels:
 Run the test suite:
 
 ```bash
-# Install bats testing framework
-sudo apt install bats  # Ubuntu/Debian
-brew install bats-core  # macOS
-
 # Run tests
-bats tests/test_update.bats
+./tests/test_basic.sh
 ```
 
 ## 🔧 Troubleshooting
@@ -283,7 +279,7 @@ aws route53 list-resource-record-sets --hosted-zone-id YOUR_ZONE_ID
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
-4. Run tests (`bats tests/test_update.bats`)
+4. Run tests (`./tests/test_basic.sh`)
 5. Commit your changes (`git commit -m 'Add amazing feature'`)
 6. Push to the branch (`git push origin feature/amazing-feature`)
 7. Open a Pull Request

@@ -30,7 +30,7 @@ Related to #
 **How has this been tested?**
 <!-- Describe the tests that you ran to verify your changes -->
 
-- [ ] Unit tests pass (`bats tests/test_update.bats`)
+- [ ] Unit tests pass (`./tests/test_basic.sh`)
 - [ ] Integration testing on local environment
 - [ ] Tested with real AWS Route 53 setup
 - [ ] Verified with multiple IP detection services

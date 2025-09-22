@@ -48,19 +48,11 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y curl jq bats awscli
-
-      - name: Create test environment
-        run: |
-          mkdir -p test-env
-          cp config.env.example test-env/config.env
-          cp hosts.json.example test-env/hosts.json
+          sudo apt-get install -y curl jq awscli
 
       - name: Run unit tests
         run: |
-          export CONFIG_FILE="test-env/config.env"
-          export HOSTS_JSON_FILE="test-env/hosts.json"
-          bats tests/test_update.bats
+          ./tests/test_basic.sh
 
   config-validation:
     name: ⚙️ Configuration Validation
