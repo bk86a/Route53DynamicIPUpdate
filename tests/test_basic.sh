@@ -16,10 +16,10 @@ test_assert() {
 
     if eval "$condition" >/dev/null 2>&1; then
         echo "✅ PASS"
-        ((TESTS_PASSED++))
+        TESTS_PASSED=$((TESTS_PASSED + 1))
     else
         echo "❌ FAIL"
-        ((TESTS_FAILED++))
+        TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
 }
 
@@ -38,10 +38,10 @@ test_command() {
 
     if [ "$actual_status" -eq "$expected_status" ]; then
         echo "✅ PASS"
-        ((TESTS_PASSED++))
+        TESTS_PASSED=$((TESTS_PASSED + 1))
     else
         echo "❌ FAIL (expected $expected_status, got $actual_status)"
-        ((TESTS_FAILED++))
+        TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
 }
 
