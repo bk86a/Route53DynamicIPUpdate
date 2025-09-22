@@ -2,7 +2,7 @@
 
 Dynamic DNS automation tool for AWS Route 53. Monitors public IP changes and automatically updates DNS A records for configured domains. Features robust error handling, email notifications, logging, and prevents unnecessary updates.
 
-## ✨ Features
+## Features
 
 - 🚀 **Automatic public IP detection** with multiple fallback services
 - 🔄 **Smart DNS record updates** (only when IP changes or mismatches detected)
@@ -17,7 +17,7 @@ Dynamic DNS automation tool for AWS Route 53. Monitors public IP changes and aut
 
 ## 🚀 Quick Start
 
-### Installation
+## Installation
 
 1. **Clone and install:**
 ```bash
@@ -84,7 +84,7 @@ Your AWS credentials need the following permissions:
 }
 ```
 
-## ⚙️ Configuration
+## Configuration
 
 ### Environment Configuration (`config.env`)
 
@@ -141,7 +141,7 @@ Copy `hosts.json.example` to `hosts.json` and add your domains:
 - `type`: Record type (currently only "A" records are supported)
 - `ttl`: Time-to-live in seconds
 
-## 🏃 Usage
+## Usage
 
 ### Manual Execution
 
@@ -234,7 +234,7 @@ Run the test suite:
 ./tests/test_basic.sh
 ```
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 

@@ -9,6 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="${SCRIPT_DIR}/config.env"
 
 if [[ -f "$CONFIG_FILE" ]]; then
+    # shellcheck source=config.env
     source "$CONFIG_FILE"
 fi
 
@@ -28,11 +29,17 @@ log_message() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $level: $message" | tee -a "$LOG_FILE"
 }
 
+# Validate IP address format
+validate_ip() {
+    local ip="$1"
+    [[ $ip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]
+}
+
 # IP detection with basic fallback
 get_current_ip() {
     local ip
     ip=$(curl -s --max-time 10 "$PRIMARY_IP_SERVICE" | tr -d '\n')
-    if [[ -z "$ip" ]]; then
+    if [[ -z "$ip" ]] || ! validate_ip "$ip"; then
         # Try fallback
         ip=$(curl -s --max-time 10 "https://api.ipify.org" | tr -d '\n')
     fi
@@ -43,8 +50,8 @@ log_message "INFO" "Starting Route53 Dynamic IP Update"
 
 # Get current public IP
 NEW_IP=$(get_current_ip)
-if [[ -z "$NEW_IP" ]]; then
-    log_message "ERROR" "Could not determine public IP"
+if [[ -z "$NEW_IP" ]] || ! validate_ip "$NEW_IP"; then
+    log_message "ERROR" "Could not determine valid public IP"
     exit 1
 fi
 
