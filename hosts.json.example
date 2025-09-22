@@ -1,0 +1,22 @@
+{
+  "records": [
+    {
+      "name": "example.com",
+      "zone_id": "Z1234567890EXAMPLE",
+      "type": "A",
+      "ttl": 300
+    },
+    {
+      "name": "subdomain.example.com",
+      "zone_id": "Z1234567890EXAMPLE",
+      "type": "A",
+      "ttl": 300
+    },
+    {
+      "name": "another-domain.org",
+      "zone_id": "Z0987654321EXAMPLE",
+      "type": "A",
+      "ttl": 600
+    }
+  ]
+}

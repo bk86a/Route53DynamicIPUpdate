@@ -1,0 +1,29 @@
+# Personal configuration files
+config.env
+hosts.json
+
+# Runtime files
+*.log
+/tmp/
+current_ip.txt
+change-batch.json
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Backup files
+*.bak
+*.backup
