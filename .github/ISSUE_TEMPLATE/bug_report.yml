@@ -1,0 +1,130 @@
+name: 🐛 Bug Report
+description: File a bug report to help us improve
+title: "[Bug] "
+labels: ["bug", "needs-triage"]
+assignees:
+  - bk86a
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! 🐛
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear and concise description of what the bug is
+      placeholder: Tell us what you see!
+      value: "A bug happened!"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+      placeholder: Tell us what you expected!
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce this issue?
+      placeholder: |
+        1. Go to '...'
+        2. Run command '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant log output (from /var/log/route53_update.log or console)
+      render: shell
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration
+      description: Please share your configuration (remove any sensitive information like emails, domains, zone IDs)
+      placeholder: |
+        config.env settings:
+        LOG_LEVEL="INFO"
+        ENABLE_EMAIL_NOTIFICATIONS="true"
+        ...
+
+        hosts.json structure:
+        {
+          "records": [
+            {
+              "name": "example.com",
+              "zone_id": "ZXXXXXXXXXXXXX",
+              "type": "A",
+              "ttl": 300
+            }
+          ]
+        }
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      description: What operating system are you running on?
+      options:
+        - Ubuntu 20.04
+        - Ubuntu 22.04
+        - Ubuntu 24.04
+        - Debian 11
+        - Debian 12
+        - CentOS 7
+        - CentOS 8
+        - RHEL 8
+        - RHEL 9
+        - Amazon Linux 2
+        - macOS
+        - Other (please specify in additional context)
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Script Version
+      description: What version of the script are you using? (check update.sh line 5)
+      placeholder: "2.0.0"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: dependencies
+    attributes:
+      label: Dependencies Check
+      description: Please confirm which dependencies are installed and working
+      options:
+        - label: AWS CLI is installed and configured
+        - label: jq is installed
+        - label: curl is installed
+        - label: msmtp is installed (if using email notifications)
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add any other context about the problem here
+      placeholder: Any additional information that might help us solve the issue
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our Code of Conduct
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

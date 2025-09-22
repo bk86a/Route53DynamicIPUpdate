@@ -1,0 +1,89 @@
+name: 🚀 Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: 📦 Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Creating release for version: $VERSION"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          if [ -f CHANGELOG.md ]; then
+            # Extract changelog for this version
+            awk '/^## \['${{ steps.version.outputs.VERSION }}'\]/{flag=1; next} /^## \[/{flag=0} flag' CHANGELOG.md > release_notes.md
+            if [ ! -s release_notes.md ]; then
+              echo "No changelog found for version ${{ steps.version.outputs.VERSION }}, using git log"
+              git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD > release_notes.md
+            fi
+          else
+            echo "No CHANGELOG.md found, using git log"
+            git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD > release_notes.md
+          fi
+
+      - name: Create installation package
+        run: |
+          mkdir -p route53-dynamic-ip-update-${{ steps.version.outputs.VERSION }}
+          cp update.sh route53-dynamic-ip-update-${{ steps.version.outputs.VERSION }}/
+          cp install.sh route53-dynamic-ip-update-${{ steps.version.outputs.VERSION }}/
+          cp config.env.example route53-dynamic-ip-update-${{ steps.version.outputs.VERSION }}/
+          cp hosts.json.example route53-dynamic-ip-update-${{ steps.version.outputs.VERSION }}/
+          cp README.md route53-dynamic-ip-update-${{ steps.version.outputs.VERSION }}/
+          cp LICENSE route53-dynamic-ip-update-${{ steps.version.outputs.VERSION }}/
+          cp CHANGELOG.md route53-dynamic-ip-update-${{ steps.version.outputs.VERSION }}/
+          cp -r tests/ route53-dynamic-ip-update-${{ steps.version.outputs.VERSION }}/
+
+          # Create tarball
+          tar -czf route53-dynamic-ip-update-${{ steps.version.outputs.VERSION }}.tar.gz route53-dynamic-ip-update-${{ steps.version.outputs.VERSION }}/
+
+          # Create zip
+          zip -r route53-dynamic-ip-update-${{ steps.version.outputs.VERSION }}.zip route53-dynamic-ip-update-${{ steps.version.outputs.VERSION }}/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref }}
+          name: Route53 Dynamic IP Update v${{ steps.version.outputs.VERSION }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+          files: |
+            route53-dynamic-ip-update-${{ steps.version.outputs.VERSION }}.tar.gz
+            route53-dynamic-ip-update-${{ steps.version.outputs.VERSION }}.zip
+            update.sh
+            install.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify:
+    name: 📢 Notify Release
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Post release summary
+        run: |
+          echo "🎉 Route53 Dynamic IP Update v${{ needs.create-release.outputs.version }} has been released!"
+          echo "📦 Download: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
+          echo "📚 Documentation: https://github.com/${{ github.repository }}#readme"

@@ -1,0 +1,230 @@
+name: 🧪 CI Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  shellcheck:
+    name: 🔍 ShellCheck Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: '.'
+          format: gcc
+          severity: warning
+        env:
+          SHELLCHECK_OPTS: -e SC1091 -e SC2034
+
+  syntax-check:
+    name: 📝 Bash Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check Bash syntax
+        run: |
+          find . -name "*.sh" -type f -exec bash -n {} \;
+          find . -name "*.bats" -type f -exec bash -n {} \;
+
+  unit-tests:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, ubuntu-22.04, ubuntu-24.04]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl jq bats awscli
+
+      - name: Create test environment
+        run: |
+          mkdir -p test-env
+          cp config.env.example test-env/config.env
+          cp hosts.json.example test-env/hosts.json
+
+      - name: Run unit tests
+        run: |
+          export CONFIG_FILE="test-env/config.env"
+          export HOSTS_JSON_FILE="test-env/hosts.json"
+          bats tests/test_update.bats
+
+  config-validation:
+    name: ⚙️ Configuration Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Validate JSON examples
+        run: |
+          echo "Validating hosts.json.example..."
+          jq . hosts.json.example > /dev/null
+          echo "✅ hosts.json.example is valid JSON"
+
+      - name: Validate config examples
+        run: |
+          echo "Validating config.env.example..."
+          source config.env.example
+          echo "✅ config.env.example sources correctly"
+
+      - name: Check required fields
+        run: |
+          echo "Checking required configuration fields..."
+
+          # Check that example files contain expected fields
+          grep -q "EMAIL=" config.env.example
+          grep -q "HOSTS_JSON_FILE=" config.env.example
+          grep -q "LOG_FILE=" config.env.example
+
+          # Check JSON structure
+          jq -e '.records | length > 0' hosts.json.example > /dev/null
+          jq -e '.records[0] | has("name", "zone_id", "type", "ttl")' hosts.json.example > /dev/null
+
+          echo "✅ All required fields present"
+
+  security-scan:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for secrets
+        run: |
+          echo "Scanning for potential secrets..."
+
+          # Check for common secret patterns (should not find any)
+          if grep -r -E "(password|secret|key|token)" --include="*.sh" --include="*.md" --include="*.yml" . | grep -v -E "(example|template|placeholder|YOUR_|EXAMPLE)"; then
+            echo "❌ Potential secrets found!"
+            exit 1
+          fi
+
+          echo "✅ No secrets detected"
+
+      - name: Check for personal data
+        run: |
+          echo "Scanning for personal data..."
+
+          # Check for email patterns (should only be in examples)
+          if grep -r -E "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}" . | grep -v -E "(example\.com|your-email|test@|placeholder)"; then
+            echo "❌ Personal email addresses found!"
+            exit 1
+          fi
+
+          echo "✅ No personal data detected"
+
+  documentation:
+    name: 📚 Documentation Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check README completeness
+        run: |
+          echo "Checking README.md completeness..."
+
+          # Check for required sections
+          grep -q "## Features" README.md
+          grep -q "## Installation" README.md
+          grep -q "## Configuration" README.md
+          grep -q "## Usage" README.md
+          grep -q "## Troubleshooting" README.md
+
+          echo "✅ README.md has all required sections"
+
+      - name: Check for broken links
+        run: |
+          echo "Checking for broken internal links..."
+
+          # Check that referenced files exist
+          if grep -o "\[.*\](.*\.md)" README.md | grep -o "([^)]*)" | tr -d "()" | while read file; do
+            if [[ "$file" =~ ^[^/].*\.md$ ]] && [[ ! -f "$file" ]]; then
+              echo "❌ Broken link to $file"
+              exit 1
+            fi
+          done; then
+            echo "✅ All internal links are valid"
+          fi
+
+  integration-test:
+    name: 🔗 Integration Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl jq
+
+      - name: Test IP detection functions
+        run: |
+          echo "Testing IP detection..."
+
+          # Test primary IP service
+          IP=$(curl -s --max-time 10 http://checkip.amazonaws.com | tr -d '\n\r ')
+          if [[ $IP =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+            echo "✅ Primary IP service working: $IP"
+          else
+            echo "❌ Primary IP service failed"
+            exit 1
+          fi
+
+      - name: Test fallback IP services
+        run: |
+          echo "Testing fallback IP services..."
+
+          services="https://ipinfo.io/ip https://api.ipify.org https://icanhazip.com"
+          for service in $services; do
+            IP=$(curl -s --max-time 10 "$service" | tr -d '\n\r ')
+            if [[ $IP =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+              echo "✅ $service working: $IP"
+            else
+              echo "⚠️ $service failed (this is OK as long as primary works)"
+            fi
+          done
+
+  installer-test:
+    name: 📦 Installer Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl jq
+
+      - name: Test installer (dry run)
+        run: |
+          echo "Testing installer without actual installation..."
+
+          # Check installer syntax
+          bash -n install.sh
+
+          # Verify installer has required components
+          grep -q "INSTALL_DIR=" install.sh
+          grep -q "dependencies" install.sh
+          grep -q "systemd" install.sh
+
+          echo "✅ Installer syntax and structure valid"

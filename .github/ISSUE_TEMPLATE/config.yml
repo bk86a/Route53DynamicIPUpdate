@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://github.com/bk86a/Route53DynamicIPUpdate#readme
+    about: Check the comprehensive documentation and troubleshooting guide
+  - name: 🚀 Discussions
+    url: https://github.com/bk86a/Route53DynamicIPUpdate/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 🔧 AWS Route 53 Documentation
+    url: https://docs.aws.amazon.com/route53/
+    about: Official AWS Route 53 documentation for setup and configuration

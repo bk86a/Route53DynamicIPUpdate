@@ -1,0 +1,95 @@
+name: ❓ Question
+description: Ask a question about usage, setup, or general support
+title: "[Question] "
+labels: ["question", "needs-triage"]
+assignees:
+  - bk86a
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your question! 🤔 We're here to help.
+
+        **Before asking:** Please check the [README](https://github.com/bk86a/Route53DynamicIPUpdate#readme) and [troubleshooting section](https://github.com/bk86a/Route53DynamicIPUpdate#troubleshooting) first.
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Question Category
+      description: What type of question is this?
+      options:
+        - Installation & Setup
+        - Configuration
+        - AWS Setup & Permissions
+        - Troubleshooting
+        - Usage & Best Practices
+        - Integration with other tools
+        - Feature clarification
+        - General support
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+      placeholder: Please be as specific as possible...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Provide context about your setup, what you're trying to achieve, or what you've already tried
+      placeholder: |
+        My setup:
+        - Operating System:
+        - AWS setup:
+        - What I'm trying to do:
+        - What I've tried:
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration (if relevant)
+      description: Share your configuration if it's relevant to the question (remove sensitive information)
+      render: bash
+      placeholder: |
+        # config.env
+        EMAIL="user@example.com"
+        LOG_LEVEL="INFO"
+        ...
+
+        # hosts.json
+        {
+          "records": [...]
+        }
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log output (if relevant)
+      description: Include any relevant log output
+      render: shell
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission checklist
+      description: Please confirm you've done the following
+      options:
+        - label: I've read the README and troubleshooting section
+        - label: I've searched existing issues for similar questions
+        - label: I've provided enough context for others to understand my question
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our Code of Conduct
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

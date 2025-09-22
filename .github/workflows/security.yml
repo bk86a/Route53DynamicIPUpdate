@@ -1,0 +1,195 @@
+name: 🔒 Security Scan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run security scan daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  secret-scan:
+    name: 🔍 Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependency-scan:
+    name: 📦 Dependency Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for vulnerable dependencies
+        run: |
+          echo "Checking for known vulnerable patterns in shell scripts..."
+
+          # Check for dangerous shell patterns
+          if grep -r "eval\|exec\|system" --include="*.sh" .; then
+            echo "⚠️ Found potentially dangerous shell commands - review carefully"
+          fi
+
+          # Check for unsafe input handling
+          if grep -r "\$[^{]" --include="*.sh" . | grep -v -E "(echo|log|printf)"; then
+            echo "⚠️ Found potentially unsafe variable expansions - ensure proper quoting"
+          fi
+
+          echo "✅ Basic security patterns checked"
+
+  code-analysis:
+    name: 📊 Static Code Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Bandit Security Linter (if Python files exist)
+        run: |
+          if find . -name "*.py" -type f | head -1 | grep -q .; then
+            pip install bandit
+            bandit -r . -f json -o bandit-report.json || true
+            if [ -f bandit-report.json ]; then
+              echo "Python security scan completed"
+            fi
+          else
+            echo "No Python files found, skipping Bandit scan"
+          fi
+
+      - name: Run Semgrep for general security patterns
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/secrets
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        continue-on-error: true
+
+  permission-audit:
+    name: 🔐 Permission Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check file permissions
+        run: |
+          echo "Checking file permissions..."
+
+          # Check for files with overly permissive permissions
+          find . -type f -perm 0777 -exec echo "⚠️ File {} has 777 permissions" \;
+          find . -type f -perm 0666 -exec echo "⚠️ File {} has 666 permissions" \;
+
+          # Check that script files are executable
+          if [ ! -x update.sh ]; then
+            echo "❌ update.sh should be executable"
+            exit 1
+          fi
+
+          if [ ! -x install.sh ]; then
+            echo "❌ install.sh should be executable"
+            exit 1
+          fi
+
+          echo "✅ File permissions look good"
+
+  aws-security:
+    name: ☁️ AWS Security Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check AWS configuration security
+        run: |
+          echo "Checking AWS-related security practices..."
+
+          # Check that no AWS credentials are hardcoded
+          if grep -r -E "(aws_access_key|aws_secret|AKIA[0-9A-Z]{16})" --include="*.sh" --include="*.md" .; then
+            echo "❌ AWS credentials found in code!"
+            exit 1
+          fi
+
+          # Check for proper IAM permission documentation
+          if ! grep -q "route53:ListResourceRecordSets" README.md; then
+            echo "⚠️ AWS permissions not documented in README"
+          fi
+
+          if ! grep -q "route53:ChangeResourceRecordSets" README.md; then
+            echo "⚠️ AWS permissions not documented in README"
+          fi
+
+          # Check that we're not using overly broad permissions
+          if grep -r "Resource.*\*" --include="*.md" .; then
+            echo "ℹ️ Found wildcard resources in documentation - ensure this is intentional"
+          fi
+
+          echo "✅ AWS security practices checked"
+
+  input-validation:
+    name: ✅ Input Validation Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check input validation patterns
+        run: |
+          echo "Checking input validation in scripts..."
+
+          # Check for IP validation
+          if ! grep -q "validate_ip" update.sh; then
+            echo "❌ No IP validation function found"
+            exit 1
+          fi
+
+          # Check for JSON validation
+          if ! grep -q "jq.*-e" update.sh; then
+            echo "❌ No JSON validation found"
+            exit 1
+          fi
+
+          # Check for basic input sanitization
+          if ! grep -q "tr.*-d" update.sh; then
+            echo "ℹ️ Consider adding input sanitization"
+          fi
+
+          echo "✅ Input validation patterns found"
+
+  security-report:
+    name: 📋 Security Summary
+    needs: [secret-scan, dependency-scan, code-analysis, permission-audit, aws-security, input-validation]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Security Summary
+        run: |
+          echo "🔒 Security Scan Summary"
+          echo "======================="
+          echo "Secret Scan: ${{ needs.secret-scan.result }}"
+          echo "Dependency Scan: ${{ needs.dependency-scan.result }}"
+          echo "Code Analysis: ${{ needs.code-analysis.result }}"
+          echo "Permission Audit: ${{ needs.permission-audit.result }}"
+          echo "AWS Security: ${{ needs.aws-security.result }}"
+          echo "Input Validation: ${{ needs.input-validation.result }}"
+
+          if [[ "${{ needs.secret-scan.result }}" == "failure" ||
+                "${{ needs.permission-audit.result }}" == "failure" ||
+                "${{ needs.aws-security.result }}" == "failure" ||
+                "${{ needs.input-validation.result }}" == "failure" ]]; then
+            echo "❌ Security issues found - please review"
+            exit 1
+          else
+            echo "✅ All security checks passed"
+          fi

@@ -1,0 +1,194 @@
+name: 🤖 Auto Update Dependencies
+
+on:
+  schedule:
+    # Run weekly on Sundays at 3 AM UTC
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+
+jobs:
+  check-updates:
+    name: 📦 Check for Updates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check GitHub Actions versions
+        id: actions-check
+        run: |
+          echo "Checking for GitHub Actions updates..."
+
+          # Create a temporary file to track if updates are needed
+          echo "false" > updates_needed.txt
+
+          # Check actions/checkout
+          CURRENT_CHECKOUT=$(grep "uses: actions/checkout@" .github/workflows/*.yml | head -1 | sed 's/.*@//')
+          LATEST_CHECKOUT=$(curl -s https://api.github.com/repos/actions/checkout/releases/latest | jq -r .tag_name)
+          if [ "$CURRENT_CHECKOUT" != "$LATEST_CHECKOUT" ]; then
+            echo "actions/checkout can be updated from $CURRENT_CHECKOUT to $LATEST_CHECKOUT"
+            echo "true" > updates_needed.txt
+          fi
+
+          # Check softprops/action-gh-release
+          if grep -q "softprops/action-gh-release" .github/workflows/*.yml; then
+            CURRENT_RELEASE=$(grep "uses: softprops/action-gh-release@" .github/workflows/*.yml | head -1 | sed 's/.*@//')
+            LATEST_RELEASE=$(curl -s https://api.github.com/repos/softprops/action-gh-release/releases/latest | jq -r .tag_name)
+            if [ "$CURRENT_RELEASE" != "$LATEST_RELEASE" ]; then
+              echo "softprops/action-gh-release can be updated from $CURRENT_RELEASE to $LATEST_RELEASE"
+              echo "true" > updates_needed.txt
+            fi
+          fi
+
+          UPDATES_NEEDED=$(cat updates_needed.txt)
+          echo "updates_needed=$UPDATES_NEEDED" >> $GITHUB_OUTPUT
+
+      - name: Check IP detection services
+        id: ip-check
+        run: |
+          echo "Testing IP detection services..."
+
+          # Test all IP services mentioned in the script
+          services="http://checkip.amazonaws.com https://ipinfo.io/ip https://api.ipify.org https://icanhazip.com"
+          failed_services=""
+
+          for service in $services; do
+            if ! curl -s --max-time 10 "$service" | grep -E '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$' >/dev/null; then
+              failed_services="$failed_services $service"
+              echo "⚠️ Service $service is not responding correctly"
+            else
+              echo "✅ Service $service is working"
+            fi
+          done
+
+          if [ -n "$failed_services" ]; then
+            echo "failed_services=$failed_services" >> $GITHUB_OUTPUT
+            echo "service_issues=true" >> $GITHUB_OUTPUT
+          else
+            echo "service_issues=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check documentation links
+        id: link-check
+        run: |
+          echo "Checking external links in documentation..."
+
+          # Check AWS documentation links
+          aws_links=$(grep -o 'https://docs\.aws\.amazon\.com[^)]*' README.md || true)
+          broken_links=""
+
+          for link in $aws_links; do
+            if ! curl -s --head "$link" | grep "200 OK" >/dev/null; then
+              broken_links="$broken_links $link"
+              echo "⚠️ Link $link may be broken"
+            else
+              echo "✅ Link $link is working"
+            fi
+          done
+
+          if [ -n "$broken_links" ]; then
+            echo "broken_links=$broken_links" >> $GITHUB_OUTPUT
+            echo "link_issues=true" >> $GITHUB_OUTPUT
+          else
+            echo "link_issues=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create issue for updates
+        if: steps.actions-check.outputs.updates_needed == 'true' || steps.ip-check.outputs.service_issues == 'true' || steps.link-check.outputs.link_issues == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueTitle = '🤖 Automated Maintenance - Updates Available';
+            const issueBody = `
+            ## Automated Maintenance Report
+
+            This issue was automatically created to report potential updates and maintenance items.
+
+            ### GitHub Actions Updates
+            ${{ steps.actions-check.outputs.updates_needed == 'true' && '⚠️ GitHub Actions updates are available. Please review and update workflow files.' || '✅ GitHub Actions are up to date.' }}
+
+            ### IP Detection Services
+            ${{ steps.ip-check.outputs.service_issues == 'true' && format('⚠️ Some IP detection services are not responding: {0}', steps.ip-check.outputs.failed_services) || '✅ All IP detection services are working correctly.' }}
+
+            ### Documentation Links
+            ${{ steps.link-check.outputs.link_issues == 'true' && format('⚠️ Some documentation links may be broken: {0}', steps.link-check.outputs.broken_links) || '✅ All documentation links are working.' }}
+
+            ### Recommended Actions
+            - [ ] Update GitHub Actions to latest versions
+            - [ ] Review and update any failing IP detection services
+            - [ ] Fix any broken documentation links
+            - [ ] Test the updated configuration
+
+            ---
+            *This issue was automatically generated by the maintenance workflow.*
+            `;
+
+            // Check if similar issue already exists
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'maintenance,automated'
+            });
+
+            const existingIssue = issues.find(issue => issue.title.includes('Automated Maintenance'));
+
+            if (!existingIssue) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: issueTitle,
+                body: issueBody,
+                labels: ['maintenance', 'automated', 'enhancement']
+              });
+              console.log('Created maintenance issue');
+            } else {
+              console.log('Maintenance issue already exists, skipping creation');
+            }
+
+  dependency-status:
+    name: 📊 Dependency Status
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate dependency report
+        run: |
+          echo "📊 Dependency Status Report" > dependency_report.md
+          echo "=========================" >> dependency_report.md
+          echo "" >> dependency_report.md
+
+          echo "## Core Dependencies" >> dependency_report.md
+          echo "- **curl**: $(curl --version | head -1)" >> dependency_report.md
+          echo "- **jq**: $(jq --version)" >> dependency_report.md
+          echo "- **AWS CLI**: $(aws --version 2>&1 | head -1)" >> dependency_report.md
+          echo "- **Bash**: $(bash --version | head -1)" >> dependency_report.md
+          echo "" >> dependency_report.md
+
+          echo "## GitHub Actions" >> dependency_report.md
+          grep "uses:" .github/workflows/*.yml | sed 's/.*uses: /- /' | sort -u >> dependency_report.md
+          echo "" >> dependency_report.md
+
+          echo "## Last Updated" >> dependency_report.md
+          echo "$(date -u)" >> dependency_report.md
+
+          cat dependency_report.md
+
+      - name: Comment on latest commit (if on main branch)
+        if: github.ref == 'refs/heads/main'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reportContent = fs.readFileSync('dependency_report.md', 'utf8');
+
+            // Only create comment if this is a scheduled run
+            if (context.eventName === 'schedule') {
+              await github.rest.repos.createCommitComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: context.sha,
+                body: `## 🤖 Weekly Dependency Report\n\n${reportContent}`
+              });
+            }
