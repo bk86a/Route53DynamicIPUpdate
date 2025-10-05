@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   issues: write
   pull-requests: write
 
@@ -172,7 +172,7 @@ jobs:
           echo "" >> dependency_report.md
 
           echo "## GitHub Actions" >> dependency_report.md
-          grep "uses:" .github/workflows/*.yml | sed 's/.*uses: /- /' | sort -u >> dependency_report.md
+          grep "uses:" .github/workflows/*.yml | sed 's/.*uses: */- /' | sort -u >> dependency_report.md
           echo "" >> dependency_report.md
 
           echo "## Last Updated" >> dependency_report.md
